@@ -1,57 +1,128 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Threading;
+using System.Windows.Input;
+using System.Windows;
+
 
 namespace minecraft_restarter
 {
     class Program
     {
-        static void Main()
+
+        public static void Main()
         {
+            Process ServerProc = new Process();
+            ServerStart(ServerProc);
+
             while (true)
             {
 
-                bool serverUp = Server_check();
+                bool serverUp = IsServer_up();
+                bool outOfMemory = CheckOutOfMemory();
+
+                if (outOfMemory == true)
+                {
+
+                    ServerStop(ServerProc);
+
+                }
 
                 if (serverUp == true)
                 {
                     Console.WriteLine("server up");
                     Thread.Sleep(5000);
+
                 }
                 else
                 {
                     Console.WriteLine("server down, restarting server");
-                    RestartServer();
+                    ServerStart(ServerProc);
                     Thread.Sleep(5000);
                 }
 
             }
         }
 
-        private static void RestartServer()
+        private static void ServerStart(Process ServerProc)
         {
-            string path = @"C:\MC\The Paper World\"; //Path to your server.jar file.
-            var process = new Process();
-            process.StartInfo.FileName = path + "Start_Server.bat"; //Name of the .jar file.
-            process.StartInfo.WorkingDirectory = path;
-            process.StartInfo.UseShellExecute = true;
-            process.Start();
+            //string path = @"C:\MC\The Paper World\"; //Path to your server.jar file.
+            //ServerProc.StartInfo.FileName = path + "Start Server.bat"; //Name of the .jar file.
+            //ServerProc.StartInfo.WorkingDirectory = path;
+            //ServerProc.StartInfo.UseShellExecute = true;
+            //ServerProc.Start();
+            string ServerFile;
+            string ServerPath;
+
+
+            // If the values are already there then just load them.
+            ServerFile = "server.jar";
+            ServerPath = @"C:\MC\The Paper World\";
+
+            var startInfo = new ProcessStartInfo("java", "-Xmx6G -Xms6G -jar " + ServerFile + " nogui");
+            //var startInfo = new ProcessStartInfo("java", "-Xmx6G -Xms6G -jar " + ServerFile);
+            // Replace the following with the location of your Minecraft Server
+            startInfo.WorkingDirectory = ServerPath;
+            // Notice that the Minecraft Server uses the Standard Error instead of the Standard Output
+
+            startInfo.RedirectStandardInput = true;
+            startInfo.UseShellExecute = false; // Necessary for Standard Stream Redirection
+            startInfo.CreateNoWindow = true; // You can do either this or open it with "javaw" instead of "java"
+
+            ServerProc = new Process();
+            ServerProc.StartInfo = startInfo;
+            ServerProc.EnableRaisingEvents = true;
+            ServerProc.Start();
+            Thread.Sleep(10000);
+
         }
 
-        private static bool Server_check()
+        private static void ServerStop(Process ServerProc)
+        {
+            StreamWriter myStreamWriter = ServerProc.StandardInput;
+
+            // Prompt the user for input text lines to sort.
+            // Write each line to the StandardInput stream of
+            // the sort command.
+            String inputText;
+
+            inputText = "stop";
+            myStreamWriter.WriteLine(inputText);
+
+            // End the input stream to the sort command.
+            // When the stream closes, the sort command
+            // writes the sorted text lines to the
+            // console.
+            myStreamWriter.Close();
+
+        }
+
+
+        private static bool CheckOutOfMemory()
+        {
+            //if (servers.Count < 1)
+            //{
+            //    return true;
+            //}
+
+            return true;
+        }
+
+        private static bool IsServer_up()
         {
 
-            var query ="SELECT * "
+            var query = "SELECT * "
                     + "FROM Win32_Process "
                     + "WHERE Name = 'java.exe' "
                     + "OR "
                     + "Name = 'javaw.exe'";
-                    //+ "AND CommandLine LIKE '%Minecraft%'";
+            //+ "AND CommandLine LIKE '%Minecraft%'";
 
             // get associated processes
             List<Process> servers = null;
@@ -66,89 +137,6 @@ namespace minecraft_restarter
             }
 
             return true;
-        }
-        /*
-        private string GetJavaInstallationPath()
-        {
-            string environmentPath = Environment.GetEnvironmentVariable("JAVA_HOME");
-            if (!string.IsNullOrEmpty(environmentPath))
-            {
-                return environmentPath;
-            }
-            string javaKey = "SOFTWARE\\JavaSoft\\Java Runtime Environment\\";
-            if (!Environment.Is64BitOperatingSystem)
-            {
-                using (Microsoft.Win32.RegistryKey rk = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(javaKey))
-                {
-                    string currentVersion = rk.GetValue("CurrentVersion").ToString();
-                    using (Microsoft.Win32.RegistryKey key = rk.OpenSubKey(currentVersion))
-                    {
-                        return key.GetValue("JavaHome").ToString();
-                    }
-                }
-            }
-            else
-            {
-                using (var view64 = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine,
-                                                            RegistryView.Registry64))
-                {
-                    using (var clsid64 = view64.OpenSubKey(javaKey))
-                    {
-                        string currentVersion = clsid64.GetValue("CurrentVersion").ToString();
-                        using (RegistryKey key = clsid64.OpenSubKey(currentVersion))
-                        {
-                            return key.GetValue("JavaHome").ToString();
-                        }
-                    }
-                }
-            }
-
-        }
-        */
-
-        private static void FileMover(string sourcePath, string targetPath)
-        {
-            string sourceDirectory = sourcePath;
-            try
-            {
-                var txtFiles = Directory.EnumerateFiles(sourceDirectory, "*.*", SearchOption.TopDirectoryOnly).Where(s => s.EndsWith(".log") || s.StartsWith("hs"));
-
-                foreach (string currentFile in txtFiles)
-                {
-                    string archiveDirectory = targetPath;
-                    int count = 1;
-                    string fileNameOnly = Path.GetFileNameWithoutExtension(currentFile);
-                    string extension = Path.GetExtension(currentFile);
-                    DateTime dateTime = File.GetLastWriteTime(currentFile);
-                    FileInfo file =
-                        new FileInfo(archiveDirectory + "/" + dateTime.ToString("dd-MM-yyyy") + "/" +
-                                     fileNameOnly + extension);
-                    file.Directory?.Create();
-
-                    string newFullPath = file.FullName;
-
-                    while (File.Exists(newFullPath))
-                    {
-                        string tempFileName = $"{fileNameOnly}_{count++}";
-                        newFullPath = Path.GetDirectoryName(newFullPath);
-                        newFullPath = Path.Combine(newFullPath!, tempFileName + extension);
-                    }
-                    Directory.Move(currentFile, newFullPath);
-                }
-            }
-            catch (IOException)
-            {
-
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.Message + $"Destination or source folder not found");
-                //Following part would help keep application running if someone accidentally renamed/deleted/moved the folders,
-                //but any existing logs would obviously not carry over.
-                Console.WriteLine("Attempting to recreate folders");
-                Directory.CreateDirectory(targetPath);
-                Directory.CreateDirectory(sourcePath);
-            }
         }
     }
 }
