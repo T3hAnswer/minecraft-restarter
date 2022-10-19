@@ -20,14 +20,14 @@ namespace minecraft_restarter
 
                 if (serverUp == true)
                 {
-                    Thread.Sleep(1000);
                     Console.WriteLine("server up");
+                    Thread.Sleep(5000);
                 }
                 else
                 {
                     Console.WriteLine("server down, restarting server");
                     RestartServer();
-                    Thread.Sleep(1000);
+                    Thread.Sleep(5000);
                 }
 
             }
@@ -35,9 +35,9 @@ namespace minecraft_restarter
 
         private static void RestartServer()
         {
-            string path = @"C:\MC\"; //Path to your server.jar file.
-            var process = new System.Diagnostics.Process();
-            process.StartInfo.FileName = path + "server.jar"; //Name of the .jar file.
+            string path = @"C:\MC\The Paper World\"; //Path to your server.jar file.
+            var process = new Process();
+            process.StartInfo.FileName = path + "Start_Server.bat"; //Name of the .jar file.
             process.StartInfo.WorkingDirectory = path;
             process.StartInfo.UseShellExecute = true;
             process.Start();
