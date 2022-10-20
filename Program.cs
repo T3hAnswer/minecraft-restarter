@@ -3,6 +3,7 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.PerformanceData;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -17,13 +18,14 @@ namespace minecraft_restarter
     {
         private static int lineCount = 0;
         private static StringBuilder output = new StringBuilder();
-
+        private static DateTime timeOfLastRestart = DateTime.UtcNow;
+        private static int memsize = 0; // memsize in KB
         public static void Main()
         {
             string command = "";
             Process ServerProc = new Process();
-            
             ServerStart(ServerProc);
+            _ = CheckMemoryUse(ServerProc);
 
             while (true)
             {
@@ -39,7 +41,9 @@ namespace minecraft_restarter
 
                 if (serverUp)
                 {
-                    Console.WriteLine("server up");
+                    Console.WriteLine("server up since "+ timeOfLastRestart+"UTC");
+                    Console.WriteLine("Memory used " + (memsize/1024)+ "MB");
+                    Console.WriteLine("Uptime is " + (DateTime.UtcNow - timeOfLastRestart));
                     ///Thread.Sleep(5000);
                     command = AskForExit(command, ServerProc);
                 }
@@ -56,8 +60,8 @@ namespace minecraft_restarter
         {
             try
             {
-                Console.WriteLine("write stop in the next 5 seconds to stop the server");
-                command = Reader.ReadLine(5000);
+                Console.WriteLine("write stop in the next 10 seconds to stop the server");
+                command = Reader.ReadLine(10000);
                 if (command == "stop")
                 {
                     ServerStop(ServerProc);
@@ -66,7 +70,7 @@ namespace minecraft_restarter
             }
             catch (TimeoutException)
             {
-                Console.WriteLine("Sorry, you waited too long.");
+                //Console.WriteLine("Sorry, you waited too long.");
             }
 
             return command;
@@ -103,6 +107,7 @@ namespace minecraft_restarter
             ServerProc.BeginErrorReadLine();
             //ServerProc.BeginOutputReadLine();
             Console.WriteLine(output);
+            timeOfLastRestart = DateTime.UtcNow;
             Thread.Sleep(10000);
 
         }
@@ -112,7 +117,7 @@ namespace minecraft_restarter
             StreamWriter myStreamWriter = ServerProc.StandardInput;
             String inputText;
 
-            Countdown(myStreamWriter);
+            //Countdown(myStreamWriter);
 
             inputText = "stop";
             myStreamWriter.WriteLine(inputText);
@@ -146,24 +151,64 @@ namespace minecraft_restarter
 
             return inputText;
         }
+        public static int CheckMemoryUse(Process ServerProc)
+        {
+            Process proc = ServerProc;
+            PerformanceCounter PC = new PerformanceCounter();
+            PC.CategoryName = "Process";
+            PC.CounterName = "Working Set - Private";
+            PC.InstanceName = proc.ProcessName;
+            memsize = Convert.ToInt32(PC.NextValue()) / (int)(1024);
+            PC.Close();
+            PC.Dispose();
+            return memsize;
+        }
+
 
         public static bool CheckOutOfMemory()
         {
 
+            String myEventType = null;
+            // Associate the instance of 'EventLog' with local System Log.
+            EventLog myEventLog = new EventLog("System", ".");
+            int myOption = Convert.ToInt32(3);
+            switch (myOption)
+            {
+                case 1:
+                    myEventType = "Error";
+                    break;
+                case 2:
+                    myEventType = "Information";
+                    break;
+                case 3:
+                    myEventType = "Warning";
+                    break;
+                default: break;
+            }
 
-            //string eventLogName = "System";
-
-            //EventLog eventLog = new EventLog();
-            //eventLog.Log = eventLogName;
-
-            //foreach (EventLogEntry log in eventLog.Entries)
-            //{
-            //    Console.WriteLine("{0}\n", log.Message);
-            //}
-
-
+            EventLogEntryCollection myLogEntryCollection = myEventLog.Entries;
+            int myCount = myLogEntryCollection.Count;
+            // Iterate through all 'EventLogEntry' instances in 'EventLog'.
+            for (int i = myCount - 1; i > -1; i--)
+            {
+                EventLogEntry myLogEntry = myLogEntryCollection[i];
+                // Select the entry having desired EventType.
+                if (myLogEntry.EntryType.ToString().Equals(myEventType))
+                {
+                    // Display Source of the event.
+                    Console.WriteLine(myLogEntry.Source
+                       + " was the source of last event of type "
+                       + myLogEntry.EntryType);
+                    if (myLogEntry.Source == "Resource-Exhaustion-Detector" && (timeOfLastRestart.AddHours(1) > DateTime.Now))
+                    {
+                        return true;
+                    }
+                }
+            }
             return false;
         }
+
+        //Resource-Exhaustion-Detector
 
         private static bool IsServer_up()
         {
