@@ -9,16 +9,20 @@ using System.Management;
 using System.Threading;
 using System.Windows.Input;
 using System.Windows;
-
+using System.Text;
 
 namespace minecraft_restarter
 {
-    class Program
+    internal static class Program
     {
+        private static int lineCount = 0;
+        private static StringBuilder output = new StringBuilder();
 
         public static void Main()
         {
+            string command = "";
             Process ServerProc = new Process();
+            
             ServerStart(ServerProc);
 
             while (true)
@@ -27,58 +31,82 @@ namespace minecraft_restarter
                 bool serverUp = IsServer_up();
                 bool outOfMemory = CheckOutOfMemory();
 
-                if (outOfMemory == true)
+                if (outOfMemory)
                 {
-
                     ServerStop(ServerProc);
-
+                    break;
                 }
 
-                if (serverUp == true)
+                if (serverUp)
                 {
                     Console.WriteLine("server up");
-                    Thread.Sleep(5000);
-
+                    ///Thread.Sleep(5000);
+                    command = AskForExit(command, ServerProc);
                 }
                 else
                 {
                     Console.WriteLine("server down, restarting server");
                     ServerStart(ServerProc);
-                    Thread.Sleep(5000);
                 }
 
             }
         }
 
+        private static string AskForExit(string command, Process ServerProc)
+        {
+            try
+            {
+                Console.WriteLine("write stop in the next 5 seconds to stop the server");
+                command = Reader.ReadLine(5000);
+                if (command == "stop")
+                {
+                    ServerStop(ServerProc);
+                    Environment.Exit(0);
+                }
+            }
+            catch (TimeoutException)
+            {
+                Console.WriteLine("Sorry, you waited too long.");
+            }
+
+            return command;
+        }
+
         private static void ServerStart(Process ServerProc)
         {
-            //string path = @"C:\MC\The Paper World\"; //Path to your server.jar file.
-            //ServerProc.StartInfo.FileName = path + "Start Server.bat"; //Name of the .jar file.
-            //ServerProc.StartInfo.WorkingDirectory = path;
-            //ServerProc.StartInfo.UseShellExecute = true;
-            //ServerProc.Start();
+
             string ServerFile;
             string ServerPath;
 
-
-            // If the values are already there then just load them.
             ServerFile = "server.jar";
             ServerPath = @"C:\MC\The Paper World\";
 
             var startInfo = new ProcessStartInfo("java", "-Xmx6G -Xms6G -jar " + ServerFile + " nogui");
-            //var startInfo = new ProcessStartInfo("java", "-Xmx6G -Xms6G -jar " + ServerFile);
-            // Replace the following with the location of your Minecraft Server
             startInfo.WorkingDirectory = ServerPath;
-            // Notice that the Minecraft Server uses the Standard Error instead of the Standard Output
-
+            startInfo.RedirectStandardError = true;
+            startInfo.RedirectStandardOutput = true;
             startInfo.RedirectStandardInput = true;
             startInfo.UseShellExecute = false; // Necessary for Standard Stream Redirection
             startInfo.CreateNoWindow = true; // You can do either this or open it with "javaw" instead of "java"
-
-            ServerProc = new Process();
-            ServerProc.StartInfo = startInfo;
             ServerProc.EnableRaisingEvents = true;
+            //ServerProc = new Process();
+            ServerProc.StartInfo = startInfo;
+            
+            ServerProc.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+            {
+                // Prepend line numbers to each line of the output.
+                if (!String.IsNullOrEmpty(e.Data))
+                {
+                    lineCount++;
+                    output.Append("\n[" + lineCount + "]: " + e.Data);
+                }
+            });
             ServerProc.Start();
+            //Thread.Sleep(10000);
+            ServerProc.BeginOutputReadLine();
+            Console.WriteLine(output);
+
+
             Thread.Sleep(10000);
 
         }
@@ -86,32 +114,34 @@ namespace minecraft_restarter
         private static void ServerStop(Process ServerProc)
         {
             StreamWriter myStreamWriter = ServerProc.StandardInput;
-
-            // Prompt the user for input text lines to sort.
-            // Write each line to the StandardInput stream of
-            // the sort command.
             String inputText;
-
             inputText = "stop";
             myStreamWriter.WriteLine(inputText);
-
-            // End the input stream to the sort command.
-            // When the stream closes, the sort command
-            // writes the sorted text lines to the
-            // console.
             myStreamWriter.Close();
-
+            Thread.Sleep(10000); //Tam said it must be ten
+            bool serverUp = IsServer_up();
+            if (serverUp)
+            {
+                ServerProc.Kill();
+            }
         }
 
-
-        private static bool CheckOutOfMemory()
+        public static bool CheckOutOfMemory()
         {
-            //if (servers.Count < 1)
-            //{
-            //    return true;
-            //}
 
-            return true;
+
+            string eventLogName = "System";
+
+            EventLog eventLog = new EventLog();
+            eventLog.Log = eventLogName;
+
+            foreach (EventLogEntry log in eventLog.Entries)
+            {
+                Console.WriteLine("{0}\n", log.Message);
+            }
+
+
+            return false;
         }
 
         private static bool IsServer_up()
@@ -122,7 +152,6 @@ namespace minecraft_restarter
                     + "WHERE Name = 'java.exe' "
                     + "OR "
                     + "Name = 'javaw.exe'";
-            //+ "AND CommandLine LIKE '%Minecraft%'";
 
             // get associated processes
             List<Process> servers = null;
@@ -137,6 +166,43 @@ namespace minecraft_restarter
             }
 
             return true;
+        }
+
+        class Reader
+        {
+            private static Thread inputThread;
+            private static AutoResetEvent getInput, gotInput;
+            private static string input;
+
+            static Reader()
+            {
+                getInput = new AutoResetEvent(false);
+                gotInput = new AutoResetEvent(false);
+                inputThread = new Thread(reader);
+                inputThread.IsBackground = true;
+                inputThread.Start();
+            }
+
+            private static void reader()
+            {
+                while (true)
+                {
+                    getInput.WaitOne();
+                    input = Console.ReadLine();
+                    gotInput.Set();
+                }
+            }
+
+            // omit the parameter to read a line without a timeout
+            public static string ReadLine(int timeOutMillisecs = Timeout.Infinite)
+            {
+                getInput.Set();
+                bool success = gotInput.WaitOne(timeOutMillisecs);
+                if (success)
+                    return input;
+                else
+                    throw new TimeoutException("User did not provide input within the timelimit.");
+            }
         }
     }
 }
