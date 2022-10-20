@@ -89,9 +89,7 @@ namespace minecraft_restarter
             startInfo.UseShellExecute = false; // Necessary for Standard Stream Redirection
             startInfo.CreateNoWindow = true; // You can do either this or open it with "javaw" instead of "java"
             ServerProc.EnableRaisingEvents = true;
-            //ServerProc = new Process();
             ServerProc.StartInfo = startInfo;
-            
             ServerProc.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
             {
                 // Prepend line numbers to each line of the output.
@@ -102,11 +100,9 @@ namespace minecraft_restarter
                 }
             });
             ServerProc.Start();
-            //Thread.Sleep(10000);
-            ServerProc.BeginOutputReadLine();
+            ServerProc.BeginErrorReadLine();
+            //ServerProc.BeginOutputReadLine();
             Console.WriteLine(output);
-
-
             Thread.Sleep(10000);
 
         }
@@ -115,6 +111,9 @@ namespace minecraft_restarter
         {
             StreamWriter myStreamWriter = ServerProc.StandardInput;
             String inputText;
+
+            Countdown(myStreamWriter);
+
             inputText = "stop";
             myStreamWriter.WriteLine(inputText);
             myStreamWriter.Close();
@@ -126,19 +125,41 @@ namespace minecraft_restarter
             }
         }
 
+        private static string Countdown(StreamWriter myStreamWriter)
+        {
+            string inputText = "say server restart in 1 minute";
+            myStreamWriter.WriteLine(inputText);
+            Thread.Sleep(15000);
+            inputText = "say 45 seconds left, lazy potato, get off before it restarts!";
+            myStreamWriter.WriteLine(inputText);
+            Thread.Sleep(15000);
+            inputText = "say 30 seconds left, don't be a fool, flee while you still can";
+            myStreamWriter.WriteLine(inputText);
+            Thread.Sleep(15000);
+            inputText = "say 15 seconds left, THIS IS NOT A DRILL";
+            Thread.Sleep(5000);
+            for (int a = 10; a >= 0; a--)
+            {
+                myStreamWriter.WriteLine("say server restart in {0}", a);
+                Thread.Sleep(1000);
+            }
+
+            return inputText;
+        }
+
         public static bool CheckOutOfMemory()
         {
 
 
-            string eventLogName = "System";
+            //string eventLogName = "System";
 
-            EventLog eventLog = new EventLog();
-            eventLog.Log = eventLogName;
+            //EventLog eventLog = new EventLog();
+            //eventLog.Log = eventLogName;
 
-            foreach (EventLogEntry log in eventLog.Entries)
-            {
-                Console.WriteLine("{0}\n", log.Message);
-            }
+            //foreach (EventLogEntry log in eventLog.Entries)
+            //{
+            //    Console.WriteLine("{0}\n", log.Message);
+            //}
 
 
             return false;
