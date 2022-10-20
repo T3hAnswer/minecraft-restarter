@@ -1,15 +1,10 @@
-﻿using Microsoft.Win32;
-using System;
-using System.ComponentModel;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Diagnostics.PerformanceData;
 using System.IO;
 using System.Linq;
 using System.Management;
 using System.Threading;
-using System.Windows.Input;
-using System.Windows;
 using System.Text;
 
 namespace minecraft_restarter
