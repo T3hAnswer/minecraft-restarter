@@ -36,11 +36,12 @@ namespace minecraft_restarter
 
                 if (serverUp)
                 {
-                    Console.WriteLine("server up since "+ timeOfLastRestart+"UTC");
-                    Console.WriteLine("Memory used " + (memsize/1024)+ "MB");
+                    Console.WriteLine("server up since " + timeOfLastRestart + "UTC");
+                    Console.WriteLine("Memory used " + (memsize / 1024) + "MB");
                     Console.WriteLine("Uptime is " + (DateTime.UtcNow - timeOfLastRestart));
                     ///Thread.Sleep(5000);
-                    command = AskForExit(command, ServerProc);
+                    AskForExit(ServerProc);
+                    ServerOutput(ServerProc);
                 }
                 else
                 {
@@ -51,12 +52,12 @@ namespace minecraft_restarter
             }
         }
 
-        private static string AskForExit(string command, Process ServerProc)
+        private static void AskForExit(Process ServerProc)
         {
             try
             {
                 Console.WriteLine("write stop in the next 10 seconds to stop the server");
-                command = Reader.ReadLine(10000);
+                string command = Reader.ReadLine(10000);
                 if (command == "stop")
                 {
                     ServerStop(ServerProc);
@@ -67,9 +68,14 @@ namespace minecraft_restarter
             {
                 //Console.WriteLine("Sorry, you waited too long.");
             }
-
-            return command;
+            return;
         }
+
+        private static void ServerOutput(Process ServerProc)
+        {
+
+        }
+
 
         private static void ServerStart(Process ServerProc)
         {
@@ -89,22 +95,25 @@ namespace minecraft_restarter
             startInfo.CreateNoWindow = true; // You can do either this or open it with "javaw" instead of "java"
             ServerProc.EnableRaisingEvents = true;
             ServerProc.StartInfo = startInfo;
-            ServerProc.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-            {
-                // Prepend line numbers to each line of the output.
-                if (!String.IsNullOrEmpty(e.Data))
-                {
-                    lineCount++;
-                    output.Append("\n[" + lineCount + "]: " + e.Data);
-                }
-            });
+            ServerProc.OutputDataReceived += new DataReceivedEventHandler(ServerOutputDataReceived);
+            ServerProc.ErrorDataReceived += new DataReceivedEventHandler(ServerErrorDataReceived);
             ServerProc.Start();
-            ServerProc.BeginErrorReadLine();
-            //ServerProc.BeginOutputReadLine();
-            Console.WriteLine(output);
+
+            ServerProc.BeginOutputReadLine();
+            ServerProc.WaitForExit();
+
             timeOfLastRestart = DateTime.UtcNow;
             Thread.Sleep(10000);
 
+        }
+        static void ServerErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine("Error: {0}", e.Data);
+        }
+
+        static void ServerOutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            Console.WriteLine("{0}", e.Data);
         }
 
         private static void ServerStop(Process ServerProc)
@@ -112,8 +121,9 @@ namespace minecraft_restarter
             StreamWriter myStreamWriter = ServerProc.StandardInput;
             String inputText;
 
-            //Countdown(myStreamWriter);
-
+#if RELEASE
+            Countdown(myStreamWriter);
+#endif
             inputText = "stop";
             myStreamWriter.WriteLine(inputText);
             myStreamWriter.Close();
@@ -146,6 +156,7 @@ namespace minecraft_restarter
 
             return inputText;
         }
+
         public static int CheckMemoryUse(Process ServerProc)
         {
             Process proc = ServerProc;
@@ -202,8 +213,6 @@ namespace minecraft_restarter
             }
             return false;
         }
-
-        //Resource-Exhaustion-Detector
 
         private static bool IsServer_up()
         {
