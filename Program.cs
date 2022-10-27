@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Threading;
-using System.Text;
 
 namespace minecraft_restarter
 {
@@ -62,7 +61,7 @@ namespace minecraft_restarter
         {
             try
             {
-                Console.WriteLine("write stop in the next 10 seconds to stop the server");
+                Console.WriteLine("write commands (like stop or list) in the next 10 seconds");
                 string command = Reader.ReadLine(15000);
                 if (command == "stop")
                 {
@@ -179,14 +178,14 @@ namespace minecraft_restarter
             }
         }
 
-        public static int CheckMemoryUse(Process ServerProc)
+        public static long CheckMemoryUse(Process ServerProc)
         {
             Process proc = ServerProc;
             PerformanceCounter PC = new PerformanceCounter();
             PC.CategoryName = "Process";
             PC.CounterName = "Working Set - Private";
             PC.InstanceName = proc.ProcessName;
-            int memsize = Convert.ToInt32(PC.NextValue()) / (int)(1024);
+            long memsize = Convert.ToInt64(PC.NextValue()) / 1024;
             PC.Close();
             PC.Dispose();
             return memsize;
