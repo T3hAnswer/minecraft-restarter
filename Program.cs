@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Threading;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace minecraft_restarter
 {
@@ -71,7 +72,8 @@ namespace minecraft_restarter
                 if (command == "restart")
                 {
                     ServerStop(ServerProc);
-                    ServerStart(ServerProc);
+                    Process.Start(@"minecraft_restarter.exe");
+                    Environment.Exit(0);
                 }
 
                 ServerCommandInputWriter(ServerProc, command);
