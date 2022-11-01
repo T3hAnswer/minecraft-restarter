@@ -31,7 +31,7 @@ namespace minecraft_restarter
                     Environment.Exit(0);
                 }
 
-                if (ServerUptime().TotalHours > 24 && PlayersOnline(ServerProc))
+                if (ServerUptime().TotalHours > 24 && PlayersOnlineCheck(ServerProc))
                 {
                     ServerStop(ServerProc);
                     Process.Start(@"minecraft_restarter.exe");
@@ -43,6 +43,7 @@ namespace minecraft_restarter
                     Console.WriteLine("server up since " + timeOfLastRestart + "UTC");
                     Console.WriteLine("Memory used " + (CheckMemoryUse(ServerProc) / 1024) + "MB");
                     Console.WriteLine("Uptime is " + (ServerUptime()));
+                    PlayersOnlineCommand(ServerProc);
                     AskForCommands(ServerProc);
                 }
                 else
@@ -145,15 +146,20 @@ namespace minecraft_restarter
             }
         }
 
-        private static Boolean PlayersOnline(Process ServerProc)
+        private static Boolean PlayersOnlineCheck(Process ServerProc)
+        {
+            PlayersOnlineCommand(ServerProc);
+            string checkFor = "There are 0";
+            bool b = lastLine.Contains(checkFor);
+            return b;
+        }
+
+        private static void PlayersOnlineCommand(Process ServerProc)
         {
             StreamWriter myStreamWriter = ServerProc.StandardInput;
             String inputText;
-            string checkFor = "There are 0";
             inputText = "list";
             myStreamWriter.WriteLine(inputText);
-            bool b = lastLine.Contains(checkFor);
-            return b;
         }
 
         private static void ServerCommandInputWriter(Process ServerProc, string command)
