@@ -211,7 +211,7 @@ namespace minecraft_restarter
                 servers = results.Cast<ManagementObject>()
                                  .Select(mo => Process.GetProcessById((int)(uint)mo["ProcessId"]))
                                  .ToList();
-            Console.WriteLine(servers.Count);
+            Console.WriteLine("number of java processes running: "+ servers.Count);
             if (servers.Count < 1)
             {
                 return false;
