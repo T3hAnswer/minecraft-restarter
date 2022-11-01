@@ -27,13 +27,15 @@ namespace minecraft_restarter
                 if (CheckMemoryUse(ServerProc) / 1024 > 6850)
                 {
                     ServerStop(ServerProc);
-                    ServerStart(ServerProc);
+                    Process.Start(@"minecraft_restarter.exe");
+                    Environment.Exit(0);
                 }
 
                 if (ServerUptime().TotalHours > 24 && PlayersOnline(ServerProc))
                 {
                     ServerStop(ServerProc);
-                    ServerStart(ServerProc);
+                    Process.Start(@"minecraft_restarter.exe");
+                    Environment.Exit(0);
                 }
 
                 if (serverUp)
@@ -46,7 +48,8 @@ namespace minecraft_restarter
                 else
                 {
                     Console.WriteLine("server down, restarting server");
-                    ServerStart(ServerProc);
+                    Process.Start(@"minecraft_restarter.exe");
+                    Environment.Exit(0); ;
                 }
 
             }
