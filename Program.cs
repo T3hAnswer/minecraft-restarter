@@ -24,7 +24,7 @@ namespace minecraft_restarter
 
                 bool serverUp = IsServer_up();
 
-                if (CheckMemoryUse(ServerProc) / 1024 > 6850)
+                if (CheckMemoryUse(ServerProc) / 1024 > 6700)
                 {
                     ServerStop(ServerProc);
                     Process.Start(@"minecraft_restarter.exe");
