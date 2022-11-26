@@ -50,7 +50,7 @@ namespace minecraft_restarter
                     ServerRestartSequence(ServerProc);
                 }
 
-                if (!IsServerEmpty(ServerProc) && (TimeSinceLastJoke().TotalMinutes < 2))
+                if (!IsServerEmpty(ServerProc) && (TimeSinceLastJoke().TotalMinutes > 120))
                 {
                     returnJoke(ServerProc);
                 }
