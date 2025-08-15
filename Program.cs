@@ -57,6 +57,7 @@ namespace minecraft_restarter
 
                 if (serverUp)
                 {
+                    Console.WriteLine("server location " + RetrieveServerPath());
                     Console.WriteLine("server up since " + timeOfLastRestart + "UTC");
                     Console.WriteLine("Memory used " + (CheckMemoryUse(ServerProc) / 1024) + "MB");
                     Console.WriteLine("Uptime is " + (ServerUptime()));
@@ -138,9 +139,9 @@ namespace minecraft_restarter
             string ServerPath;
 
             ServerFile = "server.jar";
-            ServerPath = @"C:\MC\The Paper World\";
+            ServerPath = RetrieveServerPath();
 
-            var startInfo = new ProcessStartInfo("java", "-Xmx6G -Xms6G -jar " + ServerFile + " nogui");
+            var startInfo = new ProcessStartInfo("java", "-Xmx3G -Xms3G -jar " + ServerFile + " nogui");
             startInfo.WorkingDirectory = ServerPath;
             startInfo.RedirectStandardError = true;
             startInfo.RedirectStandardOutput = true;
@@ -160,6 +161,12 @@ namespace minecraft_restarter
             Thread.Sleep(15000);
 
         }
+
+        private static string RetrieveServerPath()
+        {
+            return @"C:\MCLapsed\MCLapsed";
+        }
+
         static void ServerErrorDataReceived(object sender, DataReceivedEventArgs e)
         {
             Console.WriteLine("Error: {0}", e.Data);
